@@ -12,4 +12,9 @@ export default defineConfig({
     // nitro/vite builds from this
     server: { entry: "server" },
   },
+  vite: {
+    optimizeDeps: {
+      include: ["@radix-ui/react-dialog", "@radix-ui/react-label"],
+    },
+  },
 });
