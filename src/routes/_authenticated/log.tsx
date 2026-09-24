@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { CATEGORIES, expensesQuery, toISODate, type Expense } from "@/lib/expenses";
 
-const searchSchema = z.object({ id: z.string().optional() });
+const searchSchema = z.object({ id: z.string().optional(), store: z.string().optional(), category: z.string().optional() });
 
 export const Route = createFileRoute("/_authenticated/log")({
   validateSearch: searchSchema,
@@ -36,7 +36,7 @@ export const Route = createFileRoute("/_authenticated/log")({
 });
 
 function LogExpensePage() {
-  const { id } = Route.useSearch();
+  const { id, store: presetStore, category: presetCategory } = Route.useSearch();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAdmin, loading: authLoading, user } = useAuth();
@@ -45,8 +45,10 @@ function LogExpensePage() {
   const editing: Expense | undefined = id ? expenses?.find((e) => e.id === id) : undefined;
 
   const [amount, setAmount] = useState("");
-  const [store, setStore] = useState("");
-  const [category, setCategory] = useState<string>(CATEGORIES[0]);
+  const [store, setStore] = useState(presetStore ?? "");
+  const [category, setCategory] = useState<string>(
+    presetCategory && (CATEGORIES as readonly string[]).includes(presetCategory) ? presetCategory : CATEGORIES[0],
+  );
   const [date, setDate] = useState(toISODate(new Date()));
   const [note, setNote] = useState("");
   const [file, setFile] = useState<File | null>(null);

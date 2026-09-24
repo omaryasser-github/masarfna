@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { LayoutDashboard, PlusCircle, LogOut, Wallet, Shield, Moon, Sun } from "lucide-react";
+import { LayoutDashboard, PlusCircle, UtensilsCrossed, LogOut, Wallet, Shield, Moon, Sun } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -54,6 +54,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             <LayoutDashboard className="size-5" />
             اللوحة
+          </Link>
+          <Link
+            to="/food"
+            className="flex flex-1 flex-col items-center gap-1 py-3 text-xs text-muted-foreground"
+            activeProps={{ className: "text-primary font-semibold" }}
+          >
+            <UtensilsCrossed className="size-5" />
+            ناكل إيه
           </Link>
           {isAdmin ? (
             <Link

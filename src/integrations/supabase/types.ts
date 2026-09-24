@@ -104,6 +104,48 @@ export type Database = {
         }
         Relationships: []
       }
+      restaurants: {
+        Row: {
+          category: string
+          created_at: string
+          hotline: string | null
+          id: string
+          is_preset: boolean
+          location: string | null
+          menu_url: string | null
+          name: string
+          preset_description: string | null
+          preset_title: string | null
+          updated_at: string
+        }
+        Insert: {
+          category: string
+          created_at?: string
+          hotline?: string | null
+          id?: string
+          is_preset?: boolean
+          location?: string | null
+          menu_url?: string | null
+          name: string
+          preset_description?: string | null
+          preset_title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          hotline?: string | null
+          id?: string
+          is_preset?: boolean
+          location?: string | null
+          menu_url?: string | null
+          name?: string
+          preset_description?: string | null
+          preset_title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
