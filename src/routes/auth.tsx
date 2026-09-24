@@ -22,7 +22,7 @@ export const Route = createFileRoute("/auth")({
 });
 
 // Translate Supabase auth errors into friendly Arabic messages.
-function authErrorMessage(error: { status?: number; message: string }): string {
+function authErrorMessage(error: { status?: number | undefined; message: string }): string {
   const msg = error?.message ?? "";
   // Rate limit / too-many-requests from Supabase Auth
   if (
