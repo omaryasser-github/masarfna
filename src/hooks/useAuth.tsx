@@ -43,14 +43,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const userId = session?.user?.id;
     if (!userId) return;
     let cancelled = false;
+    // Check role directly from Supabase on every login
     supabase
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", userId)
-      .then(({ data }) => {
+      .rpc("has_role", { _user_id: userId, _role: "admin" })
+      .then(async ({ data: isAdmin, error }) => {
+        if (cancelled) return;
+        if (!error) {
+          setRole(isAdmin ? "admin" : "viewer");
+          return;
+        }
+        const { data } = await supabase.from("user_roles").select("role").eq("user_id", userId);
         if (cancelled) return;
         const roles = (data ?? []).map((r) => r.role);
-        setRole(roles.includes("admin") ? "admin" : roles.length ? "viewer" : null);
+        setRole(roles.includes("admin") ? "admin" : "viewer");
       });
     return () => {
       cancelled = true;

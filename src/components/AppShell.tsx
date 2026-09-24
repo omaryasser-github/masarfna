@@ -1,15 +1,19 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { LayoutDashboard, PlusCircle, LogOut, Wallet } from "lucide-react";
-import type { ReactNode } from "react";
+import { LayoutDashboard, PlusCircle, LogOut, Wallet, Shield, Moon, Sun } from "lucide-react";
+import { useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useTheme } from "@/hooks/useTheme";
 import { Button } from "@/components/ui/button";
+import { AdminSettingsDialog } from "@/components/AdminSettingsDialog";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { isAdmin, user } = useAuth();
+  const { dark, toggle } = useTheme();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   async function signOut() {
     await queryClient.cancelQueries();
@@ -61,8 +65,28 @@ export function AppShell({ children }: { children: ReactNode }) {
               سجّل مصروف
             </Link>
           ) : null}
+          {isAdmin ? (
+            <button
+              type="button"
+              onClick={() => setSettingsOpen(true)}
+              className="flex flex-1 flex-col items-center gap-1 py-3 text-xs text-muted-foreground"
+            >
+              <Shield className="size-5" />
+              الإعدادات
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={toggle}
+            aria-label="تبديل الوضع الليلي"
+            className="flex flex-1 flex-col items-center gap-1 py-3 text-xs text-muted-foreground"
+          >
+            {dark ? <Sun className="size-5" /> : <Moon className="size-5" />}
+            {dark ? "فاتح" : "ليلي"}
+          </button>
         </div>
       </nav>
+      {isAdmin ? <AdminSettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} /> : null}
     </div>
   );
 }
