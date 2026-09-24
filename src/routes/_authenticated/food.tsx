@@ -1,7 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { Clock, MapPin, Phone, Receipt, Star, UtensilsCrossed, BookOpen } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { RestaurantDialog, resolveMenuUrl, uploadMenuImage, type RestaurantRow } from "@/components/RestaurantDialog";
+import { Clock, MapPin, Phone, Receipt, Star, UtensilsCrossed, BookOpen, Plus, Pencil, Trash2, ImagePlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
@@ -29,7 +32,7 @@ const TAGS = ["الكل", "مشويات", "وجبات سريعة", "شعبي و�
 const restaurantsQuery = {
   queryKey: ["restaurants"],
   queryFn: async (): Promise<Restaurant[]> => {
-    const { data, error } = await supabase.from("restaurants" as never).select("*").order("created_at");
+    const { data, error } = await supabase.from("restaurants").select("*").order("created_at");
     if (error) throw error;
     return (data ?? []) as unknown as Restaurant[];
   },
@@ -62,7 +65,21 @@ function FoodPage() {
   const { isAdmin } = useAuth();
   const [tag, setTag] = useState<string>("الكل");
   const [menu, setMenu] = useState<Restaurant | null>(null);
+  const [editing, setEditing] = useState<RestaurantRow | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const qc = useQueryClient();
   const restaurants = useQuery(restaurantsQuery);
+
+  const openAdd = () => { setEditing(null); setFormOpen(true); };
+  const openEdit = (r: Restaurant) => { setEditing(r); setFormOpen(true); };
+  const remove = async (r: Restaurant) => {
+    if (!window.confirm(`متأكد إنك عايز تمسح "${r.name}"؟`)) return;
+    const { error } = await supabase.from("restaurants").delete().eq("id", r.id);
+    if (error) { toast.error("ماقدرناش نمسحه، جرّب تاني"); return; }
+    toast.success("اتمسح");
+    qc.invalidateQueries({ queryKey: ["restaurants"] });
+    if (menu?.id === r.id) setMenu(null);
+  };
   const expenses = useQuery(expensesQuery);
 
   const lastOrdered = (name: string) =>
@@ -78,6 +95,11 @@ function FoodPage() {
     <AppShell>
       <h1 className="mb-1 text-2xl font-bold">ناكل إيه النهارده؟</h1>
       <p className="mb-4 text-sm text-muted-foreground">اختار، كلّمهم، وسجّل الفاتورة على طول.</p>
+      {isAdmin && (
+        <Button className="mb-5 w-full" size="lg" onClick={openAdd}>
+          <Plus className="size-5" /> إضافة مطعم/سوبرماركت
+        </Button>
+      )}
 
       {restaurants.isError ? (
         <div className="card-soft rounded-xl border border-destructive/30 bg-card p-5 text-center">
@@ -155,6 +177,7 @@ function FoodPage() {
                         <h3 className="text-lg font-bold">{r.name}</h3>
                         <Badge variant="secondary" className="mt-1">{r.category}</Badge>
                       </div>
+                      <div className="flex flex-col items-end gap-2">
                       {last ? (
                         <span className="flex items-center gap-1 rounded-full bg-accent px-2 py-1 text-xs text-accent-foreground">
                           <Clock className="size-3" /> آخر طلب {formatDate(last)}
@@ -162,6 +185,17 @@ function FoodPage() {
                       ) : (
                         <span className="text-xs text-muted-foreground">لسه ماطلبناش</span>
                       )}
+                      {isAdmin && (
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="icon" className="size-8" aria-label="تعديل" onClick={() => openEdit(r)}>
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="size-8 text-destructive" aria-label="حذف" onClick={() => remove(r)}>
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </div>
+                      )}
+                      </div>
                     </div>
                     {r.location && (
                       <p className="mt-2 flex items-center gap-1 text-sm text-muted-foreground">
@@ -187,19 +221,8 @@ function FoodPage() {
         </>
       )}
 
-      <Dialog open={!!menu} onOpenChange={(o) => !o && setMenu(null)}>
-        <DialogContent dir="rtl" className="text-right">
-          <DialogHeader className="text-right sm:text-right">
-            <DialogTitle>منيو {menu?.name}</DialogTitle>
-            <DialogDescription>{menu?.category}</DialogDescription>
-          </DialogHeader>
-          {menu?.menu_url ? (
-            <img src={menu.menu_url} alt={`منيو ${menu.name}`} className="max-h-[70vh] w-full rounded-lg object-contain" />
-          ) : (
-            <p className="py-8 text-center text-muted-foreground">المنيو لسه مش متضاف 📋</p>
-          )}
-        </DialogContent>
-      </Dialog>
+      <MenuViewer restaurant={menu} isAdmin={isAdmin} onClose={() => setMenu(null)} onUploaded={(url) => setMenu((m) => (m ? { ...m, menu_url: url } : m))} />
+      <RestaurantDialog open={formOpen} onOpenChange={setFormOpen} restaurant={editing} />
     </AppShell>
   );
 }
@@ -217,5 +240,83 @@ function HotlineButton({ hotline }: { hotline: string | null }) {
         <Phone className="size-4" /> {hotline}
       </a>
     </Button>
+  );
+}
+
+function MenuViewer({
+  restaurant,
+  isAdmin,
+  onClose,
+  onUploaded,
+}: {
+  restaurant: Restaurant | null;
+  isAdmin: boolean;
+  onClose: () => void;
+  onUploaded: (path: string) => void;
+}) {
+  const qc = useQueryClient();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [src, setSrc] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    setSrc(null);
+    if (!restaurant?.menu_url) return;
+    setLoading(true);
+    resolveMenuUrl(restaurant.menu_url).then((u) => {
+      if (!cancelled) { setSrc(u); setLoading(false); }
+    });
+    return () => { cancelled = true; };
+  }, [restaurant?.menu_url]);
+
+  const upload = async (file: File) => {
+    if (!restaurant) return;
+    setUploading(true);
+    try {
+      const path = await uploadMenuImage(file);
+      const { error } = await supabase.from("restaurants").update({ menu_url: path }).eq("id", restaurant.id);
+      if (error) throw error;
+      toast.success("اترفع المنيو");
+      qc.invalidateQueries({ queryKey: ["restaurants"] });
+      onUploaded(path);
+    } catch (e) {
+      console.error(e);
+      toast.error("ماقدرناش نرفع المنيو، جرّب تاني");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <Dialog open={!!restaurant} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent dir="rtl" className="flex h-[100dvh] max-w-none flex-col gap-3 rounded-none border-0 bg-background p-4 text-right sm:h-[95vh] sm:max-w-3xl sm:rounded-xl">
+        <DialogHeader className="text-right sm:text-right">
+          <DialogTitle>منيو {restaurant?.name}</DialogTitle>
+          <DialogDescription>{restaurant?.category}</DialogDescription>
+        </DialogHeader>
+        <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto rounded-lg bg-muted/40">
+          {loading ? (
+            <Skeleton className="h-full w-full" />
+          ) : src ? (
+            <img src={src} alt={`منيو ${restaurant?.name}`} className="max-h-full w-full object-contain" />
+          ) : (
+            <div className="p-6 text-center">
+              <BookOpen className="mx-auto mb-3 size-12 text-muted-foreground" />
+              <p className="font-semibold">لم يتم إضافة المنيو بعد</p>
+              {isAdmin && (
+                <>
+                  <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ""; }} />
+                  <Button className="mt-4" onClick={() => fileRef.current?.click()} disabled={uploading}>
+                    <ImagePlus className="size-4" /> {uploading ? "بنرفع..." : "ارفع المنيو"}
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
