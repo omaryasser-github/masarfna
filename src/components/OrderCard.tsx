@@ -6,7 +6,7 @@ import { formatEGP, type Expense } from "@/lib/expenses";
 
 export function relativeDay(iso: string) {
   const [y, m, d] = iso.split("-").map(Number);
-  const day = new Date(y, m - 1, d);
+  const day = new Date(y ?? 1970, (m ?? 1) - 1, d ?? 1);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const diff = Math.round((today.getTime() - day.getTime()) / 86400000);
