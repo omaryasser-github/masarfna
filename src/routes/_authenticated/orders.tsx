@@ -1,5 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { useConfirmDelete } from "@/components/ConfirmDelete";
 import { ArrowRight, Receipt } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
@@ -43,6 +45,16 @@ function OrdersPage() {
     getNextPageParam: (last, all) => (last.length < PAGE ? undefined : all.length * PAGE),
   });
   const orders = q.data?.pages.flat() ?? [];
+  const qc = useQueryClient();
+  const confirmDelete = useConfirmDelete();
+  const remove = (id: string) =>
+    confirmDelete(async () => {
+      const { error } = await supabase.from("expenses").delete().eq("id", id);
+      if (error) { toast.error("مقدرناش نمسح الأوردر"); return; }
+      toast.success("اتمسح");
+      qc.invalidateQueries({ queryKey: ["orders-history"] });
+      qc.invalidateQueries({ queryKey: ["expenses"] });
+    });
 
   return (
     <AppShell>
@@ -66,7 +78,7 @@ function OrdersPage() {
         </div>
       ) : (
         <div className="space-y-3">
-          {orders.map((o) => <OrderCard key={o.id} order={o} isAdmin={isAdmin} />)}
+          {orders.map((o) => <OrderCard key={o.id} order={o} isAdmin={isAdmin} onDelete={() => remove(o.id)} />)}
           {q.hasNextPage && (
             <Button variant="outline" className="w-full" onClick={() => q.fetchNextPage()} disabled={q.isFetchingNextPage}>
               {q.isFetchingNextPage ? "بنحمّل..." : "حمّل كمان"}
