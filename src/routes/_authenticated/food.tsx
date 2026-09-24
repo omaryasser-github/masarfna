@@ -75,7 +75,7 @@ function FoodPage() {
   const remove = async (r: Restaurant) => {
     if (!window.confirm(`متأكد إنك عايز تمسح "${r.name}"؟`)) return;
     const { error } = await supabase.from("restaurants").delete().eq("id", r.id);
-    if (error) return toast.error("ماقدرناش نمسحه، جرّب تاني");
+    if (error) { toast.error("ماقدرناش نمسحه، جرّب تاني"); return; }
     toast.success("اتمسح");
     qc.invalidateQueries({ queryKey: ["restaurants"] });
     if (menu?.id === r.id) setMenu(null);

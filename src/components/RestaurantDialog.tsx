@@ -67,7 +67,7 @@ export function RestaurantDialog({
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return toast.error("اكتب اسم المكان");
+    if (!name.trim()) { toast.error("اكتب اسم المكان"); return; }
     setSaving(true);
     try {
       let menu: string | null = menuUrl.trim() || null;
