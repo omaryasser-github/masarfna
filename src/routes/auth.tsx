@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Wallet } from "lucide-react";
+import { Wallet, Eye, EyeOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,12 +21,27 @@ export const Route = createFileRoute("/auth")({
   component: AuthPage,
 });
 
+// Translate Supabase auth errors into friendly Arabic messages.
+function authErrorMessage(error: { status?: number | undefined; message: string }): string {
+  const msg = error?.message ?? "";
+  // Rate limit / too-many-requests from Supabase Auth
+  if (
+    error?.status === 429 ||
+    /rate limit|too many|over_sender_limit|email rate limit/i.test(msg)
+  ) {
+    return "برجاء الانتظار قليلاً قبل إعادة المحاولة";
+  }
+  return "الإيميل أو الباسورد غلط.";
+}
+
 function AuthPage() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [showSignInPassword, setShowSignInPassword] = useState(false);
+  const [showSignUpPassword, setShowSignUpPassword] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -38,9 +53,9 @@ function AuthPage() {
     e.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
     if (error) {
-      toast.error("مقدرناش ندخّلك", { description: "الإيميل أو الباسورد غلط." });
+      setLoading(false);
+      toast.error("مقدرناش ندخّلك", { description: authErrorMessage(error) });
       return;
     }
     toast.success("أهلاً بيك تاني 👋");
@@ -58,11 +73,12 @@ function AuthPage() {
         data: { display_name: name },
       },
     });
-    setLoading(false);
     if (error) {
-      toast.error("مقدرناش نعمل الحساب", { description: error.message });
+      setLoading(false);
+      toast.error("مقدرناش نعمل الحساب", { description: authErrorMessage(error) });
       return;
     }
+    setLoading(false);
     if (data.session) {
       toast.success("تمام! الحساب اتعمل");
       navigate({ to: "/dashboard", replace: true });
@@ -109,14 +125,30 @@ function AuthPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password">الباسورد</Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    dir="ltr"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showSignInPassword ? "text" : "password"}
+                      dir="ltr"
+                      required
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="pl-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignInPassword((v) => !v)}
+                      aria-label={showSignInPassword ? "إخفاء الباسورد" : "إظهار الباسورد"}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 flex size-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showSignInPassword ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "ثانية واحدة..." : "يلا ندخل"}
@@ -150,15 +182,31 @@ function AuthPage() {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="password2">الباسورد</Label>
-                  <Input
-                    id="password2"
-                    type="password"
-                    dir="ltr"
-                    required
-                    minLength={6}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password2"
+                      type={showSignUpPassword ? "text" : "password"}
+                      dir="ltr"
+                      required
+                      minLength={6}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="pl-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSignUpPassword((v) => !v)}
+                      aria-label={showSignUpPassword ? "إخفاء الباسورد" : "إظهار الباسورد"}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 flex size-7 items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      {showSignUpPassword ? (
+                        <EyeOff className="size-4" />
+                      ) : (
+                        <Eye className="size-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
                 <Button type="submit" className="w-full" disabled={loading}>
                   {loading ? "ثانية واحدة..." : "اعمل حساب"}
