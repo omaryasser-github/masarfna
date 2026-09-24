@@ -1,12 +1,13 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { RestaurantDialog, resolveMenuUrl, uploadMenuImage, type RestaurantRow } from "@/components/RestaurantDialog";
-import { Clock, MapPin, Phone, Receipt, Star, UtensilsCrossed, BookOpen, Plus, Pencil, Trash2, ImagePlus } from "lucide-react";
+import { Clock, MapPin, Phone, Receipt, History, UtensilsCrossed, BookOpen, Plus, Pencil, Trash2, ImagePlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
+import { OrderCard } from "@/components/OrderCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -89,7 +90,9 @@ function FoodPage() {
     navigate({ to: "/log", search: { store: r.name, category: expenseCategory(r.category) } });
 
   const list = (restaurants.data ?? []).filter((r) => tag === "الكل" || r.category === tag);
-  const presets = (restaurants.data ?? []).filter((r) => r.is_preset);
+  const allOrders = expenses.data ?? [];
+  const recent = allOrders.slice(0, 3);
+  const moreCount = Math.max(0, allOrders.length - 3);
 
   return (
     <AppShell>
@@ -117,29 +120,33 @@ function FoodPage() {
         </div>
       ) : (
         <>
-          {presets.length > 0 && (
-            <section className="mb-6">
-              <h2 className="mb-3 flex items-center gap-2 font-bold">
-                <Star className="size-4 text-primary" /> أوردراتنا الثابتة
-              </h2>
-              <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
-                {presets.map((r) => (
-                  <div key={r.id} className="card-soft w-64 shrink-0 snap-start rounded-xl border border-border bg-card p-4">
-                    <p className="font-bold">{r.preset_title ?? r.name}</p>
-                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{r.preset_description}</p>
-                    <div className="mt-3 flex gap-2">
-                      <HotlineButton hotline={r.hotline} />
-                      {isAdmin && (
-                        <Button size="sm" className="flex-1" onClick={() => order(r)}>
-                          اطلب وسجّل
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                ))}
+          <section className="mb-6">
+            <h2 className="mb-3 flex items-center gap-2 font-bold">
+              <History className="size-4 text-primary" /> أحدث الطلبات
+            </h2>
+            {expenses.isLoading ? (
+              <div className="-mx-4 flex gap-3 overflow-hidden px-4">
+                {[0, 1].map((i) => <Skeleton key={i} className="h-32 w-64 shrink-0 rounded-xl" />)}
               </div>
-            </section>
-          )}
+            ) : recent.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-border p-4 text-center text-sm text-muted-foreground">
+                لم يتم تسجيل أوردرات بعد
+              </p>
+            ) : (
+              <>
+                <div className="-mx-4 flex snap-x gap-3 overflow-x-auto px-4 pb-2">
+                  {recent.map((o) => (
+                    <OrderCard key={o.id} order={o} isAdmin={isAdmin} className="w-64 shrink-0 snap-start" />
+                  ))}
+                </div>
+                {moreCount > 0 && (
+                  <Button asChild variant="ghost" size="sm" className="mt-1 w-full text-primary">
+                    <Link to="/orders">عرض المزيد (+{moreCount.toLocaleString("ar-EG")})</Link>
+                  </Button>
+                )}
+              </>
+            )}
+          </section>
 
           <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1" role="tablist">
             {TAGS.map((t) => (
