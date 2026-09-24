@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/hooks/useAuth";
 import { Toaster } from "@/components/ui/sonner";
+import { ConfirmDeleteProvider } from "@/components/ConfirmDelete";
 
 function NotFoundComponent() {
   return (
@@ -129,7 +130,9 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-        <Outlet />
+        <ConfirmDeleteProvider>
+          <Outlet />
+        </ConfirmDeleteProvider>
         <Toaster position="top-center" dir="rtl" />
       </AuthProvider>
     </QueryClientProvider>

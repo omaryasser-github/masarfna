@@ -7,6 +7,7 @@ import { RestaurantDialog, resolveMenuUrl, uploadMenuImage, type RestaurantRow }
 import { Clock, MapPin, Phone, Receipt, History, UtensilsCrossed, BookOpen, Plus, Pencil, Trash2, ImagePlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/AppShell";
+import { useConfirmDelete } from "@/components/ConfirmDelete";
 import { OrderCard } from "@/components/OrderCard";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -73,8 +74,9 @@ function FoodPage() {
 
   const openAdd = () => { setEditing(null); setFormOpen(true); };
   const openEdit = (r: Restaurant) => { setEditing(r); setFormOpen(true); };
-  const remove = async (r: Restaurant) => {
-    if (!window.confirm(`متأكد إنك عايز تمسح "${r.name}"؟`)) return;
+  const confirmDelete = useConfirmDelete();
+  const remove = (r: Restaurant) => confirmDelete(() => doRemove(r));
+  const doRemove = async (r: Restaurant) => {
     const { error } = await supabase.from("restaurants").delete().eq("id", r.id);
     if (error) { toast.error("ماقدرناش نمسحه، جرّب تاني"); return; }
     toast.success("اتمسح");

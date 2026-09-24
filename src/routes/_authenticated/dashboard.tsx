@@ -11,6 +11,7 @@ import {
   Tooltip,
   XAxis,
 } from "recharts";
+import { useConfirmDelete } from "@/components/ConfirmDelete";
 import { CalendarDays, ImageIcon, Pencil, PlusCircle, Trash2, TrendingUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -64,7 +65,11 @@ function DashboardPage() {
   const remaining = Math.max(monthlyCap - monthTotal, 0);
   const chartData = lastSevenDays(rows);
 
-  async function handleDelete(id: string) {
+  const confirmDelete = useConfirmDelete();
+  function handleDelete(id: string) {
+    confirmDelete(() => doDelete(id));
+  }
+  async function doDelete(id: string) {
     setDeletingId(id);
     const { error } = await supabase.from("expenses").delete().eq("id", id);
     setDeletingId(null);

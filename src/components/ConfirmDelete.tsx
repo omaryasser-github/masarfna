@@ -27,7 +27,7 @@ export function ConfirmDeleteProvider({ children }: { children: ReactNode }) {
     <Ctx.Provider value={confirm}>
       {children}
       <Dialog open={!!action} onOpenChange={(o) => !o && !busy && setAction(null)}>
-        <DialogContent dir="rtl" className="max-w-sm text-center" overlayClassName="backdrop-blur-sm">
+        <DialogContent dir="rtl" className="max-w-sm text-center">
           <div className="mx-auto flex size-14 items-center justify-center rounded-full bg-destructive/10">
             <AlertTriangle className="size-7 text-destructive" />
           </div>
