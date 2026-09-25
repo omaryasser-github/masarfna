@@ -256,6 +256,4 @@ src/
 
 ## 📄 License
 
-This project was built with [Lovable](https://lovable.dev). The code is yours — push to `main` on GitHub and it syncs back into Lovable, ready for your next prompt.
-
-> **Out of scope (Phase 1/2):** food recommendation engine, mood tags, real-time Supabase subscriptions, and OCR/image processing.
+This project was built with [Lovable](https://lovable.dev).
